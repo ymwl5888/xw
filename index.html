@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="keywords" content="书签,导航,资源,链接,收藏,工具,科技,网站目录,网络书签">
+    <meta name="description" content="探索互联网优质资源">
+    <meta name="author" content="轩伟网络科技书签">
+    <meta name="robots" content="index,follow">
+    <base href="./">
+    <title>轩伟网络科技书签 - 探索互联网优质资源</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=20240707">
+    <link rel="icon" href="assets/images/favicon.svg?v=20240707" type="image/svg+xml">
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="top-header">
+        <div class="header-left">
+            <button class="menu-toggle" id="menuToggle" aria-label="菜单">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="logo">
+                <span class="logo-icon"><img src="assets/images/logo-icon.svg?v=20240707" alt="logo" width="24" height="24"></span>
+                <span class="logo-text">轩伟网络科技书签</span>
+            </div>
+        </div>
+        <div class="header-center">
+            <div class="search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" id="searchInput" placeholder="搜索书签..." autocomplete="off">
+                <button class="search-clear" id="searchClear" style="display:none">&times;</button>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="star-filter" id="starFilter" title="收藏的书签">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+            </button>
+            <a href="admin.html" class="admin-link" title="后台管理">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            </a>
+        </div>
+    </header>
+
+    <!-- 移动端搜索栏 -->
+    <div class="mobile-search">
+        <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input type="text" id="mobileSearchInput" placeholder="搜索书签..." autocomplete="off">
+            <button class="search-clear" id="mobileSearchClear" style="display:none">&times;</button>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-container">
+        <!-- 左侧分类导航 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+            <nav class="sidebar-nav">
+                <div class="sidebar-title"><img src="assets/images/sidebar-title.svg?v=20240707" alt="分类" width="20" height="20"> 资源分类</div>
+                <ul class="category-list" id="categoryList">
+                    <li class="category-item active" data-id="0">
+                        <span class="cat-icon"><img src="assets/images/category-icons/0.png" alt=""></span>
+                        <span class="cat-name">全部书签</span>
+                        <span class="cat-count" id="totalCount">0</span>
+                    </li>
+                </ul>
+                <div class="sidebar-footer">
+                    <div class="site-info">
+                        <p>© 2024 TechMark</p>
+                        <p>Powered by Static Site</p>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 右侧书签列表 -->
+        <main class="content">
+            <div class="content-header">
+                <h2 class="content-title" id="contentTitle"><img src="assets/images/content-title.svg?v=20240707" alt="全部书签" width="22" height="22"> 全部书签</h2>
+                <div class="view-info">
+                    <span id="bookmarkCount">0</span> 个书签
+                </div>
+            </div>
+            <div class="bookmark-grid" id="bookmarkGrid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>加载中...</p>
+                </div>
+            </div>
+            <div class="empty-state" id="emptyState" style="display:none">
+                <div class="empty-icon">📭</div>
+                <p>暂无书签</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- 返回顶部 -->
+    <button class="back-to-top" id="backToTop" title="返回顶部">↑</button>
+
+    <script src="assets/js/front.js?v=20240707"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            FrontApp.init();
+        });
+    </script>
+</body>
+</html>

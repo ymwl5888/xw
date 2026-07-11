@@ -1,0 +1,332 @@
+<?php
+/**
+ * 数据库安装脚本
+ */
+require_once __DIR__ . '/config.php';
+
+if (isInstalled()) {
+    header('Location: index.php');
+    exit;
+}
+
+$db = getDB();
+
+$dir = dirname(DB_PATH);
+if (!is_dir($dir)) {
+    mkdir($dir, 0755, true);
+}
+
+// 创建管理员表（用于存储密码哈希）
+$adminTableStmt = $db->prepare("
+CREATE TABLE IF NOT EXISTS admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+");
+$adminTableStmt->execute();
+
+// 创建分类表
+$db->exec("
+CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    icon VARCHAR(50) DEFAULT '📁',
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+");
+
+// 创建书签表
+$db->exec("
+CREATE TABLE IF NOT EXISTS bookmarks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title VARCHAR(200) NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    description TEXT DEFAULT '',
+    category_id INTEGER DEFAULT 0,
+    favicon VARCHAR(500) DEFAULT '',
+    is_starred INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET DEFAULT
+)
+");
+
+// 检查是否已有管理员账号
+$adminExists = $db->query("SELECT COUNT(*) FROM admins WHERE username = 'admin'")->fetchColumn();
+
+if (!$adminExists) {
+    // 插入默认管理员账号（密码哈希）
+    $passwordHash = password_hash('admin123', PASSWORD_DEFAULT);
+    $db->prepare("INSERT INTO admins (username, password_hash) VALUES (?, ?)")->execute(['admin', $passwordHash]);
+}
+
+// 插入示例分类（数据来自滔哥软件库）
+$categories = [
+    ['滔哥专栏', '📌', 1],
+    ['系统维护', '🔧', 2],
+    ['常用软件', '📦', 3],
+    ['系统工具', '⚙️', 4],
+    ['系统软件', '💻', 5],
+    ['系统美化', '🎨', 6],
+    ['网页浏览', '🌐', 7],
+    ['经典游戏', '🎮', 8],
+    ['影音娱乐', '🎵', 9],
+    ['网络工具', '📡', 10],
+    ['纯净版输入法', '⌨️', 11],
+    ['办公软件', '📝', 12],
+    ['软件卸载', '🗑️', 13],
+    ['优化清理', '♻️', 14],
+    ['压缩解压', '📂', 15],
+    ['官网驱动', '💼', 16],
+    ['神光同步', '💡', 17],
+    ['驱动工具', '🔌', 18],
+];
+
+$stmt = $db->prepare("INSERT OR IGNORE INTO categories (name, icon, sort_order) VALUES (?, ?, ?)");
+foreach ($categories as $cat) {
+    $stmt->execute($cat);
+}
+
+// 插入示例书签（数据来自滔哥软件库）
+$bookmarks = [
+    ['下载器定制版', 'https://rodgersnow.lanzoul.com/iqf2s3hl6t2j', 'Aria2专用定制版', 1, '', 0, 1],
+    ['Aria2网页版', 'https://rodgersnow.lanzoul.com/iyRIB39qemej', 'Aria2网页定制版', 1, '', 0, 2],
+    ['二维码支付', 'https://dy.cscq.vip:8888/', '微信和支付宝收款码', 1, '', 0, 3],
+    ['多功能重启系统', 'https://rodgersnow.lanzoul.com/iNaY93q2oigf', '一键重启工具', 1, '', 0, 4],
+    ['连连控', 'https://rodgersnow.lanzoul.com/i9dxl3rgb15e', '连连控绿色版', 1, '', 0, 5],
+    ['ToDesk', 'https://rodgersnow.lanzoul.com/ilTaK3auuqqb', 'ToDesk绿色版', 1, '', 0, 6],
+    ['向日葵精简版', 'https://rodgersnow.lanzoul.com/ixgcW2r3k79e', '被控端', 1, '', 0, 7],
+    ['UU远程', 'https://uuyc.163.com/', '网易出品', 1, '', 0, 8],
+    ['AnyDesk', 'https://rodgersnow.lanzoul.com/iZreL3kzrv4b', '海外远程', 1, '', 0, 9],
+    ['Steam注册修复', 'https://rodgersnow.lanzoul.com/iyDPf3muk29c', '修复Steam游戏打开失败问题', 1, '', 0, 10],
+    ['浏览器数据迁移', 'https://rodgersnow.lanzoul.com/ihKJW3r7xgqd', '备份浏览器数据', 1, '', 0, 11],
+    ['图吧工具箱', 'https://share.feijipan.com/s/txVoisZL?code=CSCQ', '硬件检测工具箱', 2, '', 0, 1],
+    ['AIDA64', 'https://rodgersnow.lanzoul.com/iqBjX3ob56oj', '著名的拷机工具', 2, '', 0, 2],
+    ['FurMark', 'https://rodgersnow.lanzoul.com/i7dFX2vtgrvc', '显卡烤机软件', 2, '', 0, 3],
+    ['CrystalDiskInfo', 'https://rodgersnow.lanzoul.com/ix4fg3q62oif', '硬盘信息查看', 2, '', 0, 4],
+    ['Defender Control', 'https://rodgersnow.lanzoul.com/iSwgU2wqgh8h', '安全中心关闭工具', 2, '', 0, 5],
+    ['Keyboard Test Utility', 'https://rodgersnow.lanzoul.com/izvYv3qcok3e', '键盘按键测试软件', 2, '', 0, 6],
+    ['IsMyHdOK', 'https://rodgersnow.lanzoul.com/iIS2j3puos9a', '硬盘基准测试', 2, '', 0, 7],
+    ['Blue Screen View', 'https://rodgersnow.lanzoul.com/ingv1324uitc', '系统蓝屏分析工具', 2, '', 0, 8],
+    ['查看硬件信息', 'https://rodgersnow.lanzoul.com/i7yAS32uhpbe', '查看硬件配置信息', 2, '', 0, 9],
+    ['Defender Remover', 'https://rodgersnow.lanzoul.com/iROjD3la7gfi', '卸载安全中心', 2, '', 0, 10],
+    ['内存检测', 'https://rodgersnow.lanzoul.com/iI36033fbxhi', '内存条稳定性检测', 2, '', 0, 11],
+    ['DISM++', 'https://rodgersnow.lanzoul.com/i6tK034azkkd', '系统维护神器', 2, '', 0, 12],
+    ['TestMem5汉化版', 'https://rodgersnow.lanzoul.com/iXn0E3nq9hqf', '内存诊断工具', 2, '', 0, 13],
+    ['KB5007651-中文补丁', 'https://rodgersnow.lanzoul.com/iMgwT381qjbe', '安全中心中文补丁包', 2, '', 0, 14],
+    ['Windows轻松设置', 'https://rodgersnow.lanzoul.com/ifQs93fs0fda', '设置系统各项配置', 2, '', 0, 15],
+    ['BIOS品牌自检', 'https://rodgersnow.lanzoul.com/iJP2e3bhg2vg', '查询主板启动快捷键', 2, '', 0, 16],
+    ['快捷烤机工具', 'https://rodgersnow.lanzoul.com/id5BU3fpbwzc', '一键多硬件压力测试', 2, '', 0, 17],
+    ['AS SSD Benchmark', 'https://rodgersnow.lanzoul.com/ioZI33j6ivwf', '硬盘基准测速', 2, '', 0, 18],
+    ['CPU-Z', 'https://rodgersnow.lanzoul.com/i7EAC3r6whqh', 'CPU信息查看', 2, '', 0, 19],
+    ['FurMark', 'https://rodgersnow.lanzoul.com/i1iAM3q631lg', '显卡检测工具', 2, '', 0, 20],
+    ['火绒应用商店', 'https://www.huorong.cn/appstore', '软件应用商店', 3, '', 0, 1],
+    ['华为应用商店', 'https://consumer.huawei.com/cn/mobileservices/appgallery/', '软件应用商店', 3, '', 0, 2],
+    ['联想应用商店', 'https://lestore.lenovo.com/', '软件应用商店', 3, '', 0, 3],
+    ['Everything', 'https://rodgersnow.lanzoul.com/iNrll2u0q1za', '号称全世界查找文件最快的工具', 3, '', 0, 4],
+    ['PixPin', 'https://rodgersnow.lanzoul.com/iXAac2uch9bc', '最强最全面的截图工具', 3, '', 0, 5],
+    ['HoneyView', 'https://rodgersnow.lanzoul.com/ioWAe2vek3ja', '小巧的看图软件', 3, '', 0, 6],
+    ['dnGrep', 'https://rodgersnow.lanzoul.com/ijxsb2w0midi', '文件内容搜索', 3, '', 0, 7],
+    ['去掉快捷方式小箭头和盾牌', 'https://rodgersnow.lanzoul.com/i2bqQ2ysfood', '自用小脚本', 3, '', 0, 8],
+    ['微信多开', 'https://rodgersnow.lanzoul.com/i6DtN30qe4tc', '微信多开小工具', 3, '', 0, 9],
+    ['系统激活', 'https://rodgersnow.lanzoul.com/ime2w3i463ni', '一键激活Win和Office', 4, '', 0, 1],
+    ['Windows Update Blocker', 'https://rodgersnow.lanzoul.com/ijyXs2xmf0ad', '禁止系统自动更新', 4, '', 0, 2],
+    ['启动管理', 'https://rodgersnow.lanzoul.com/iWAW62u1bhli', '启动和计划任务管理', 4, '', 0, 3],
+    ['dll修复增强版', 'https://share.feijipan.com/s/OUH7fWuj', '修复dx和vc运行库', 4, '', 0, 4],
+    ['FxSound', 'https://rodgersnow.lanzoul.com/iUUCq3lfs6mb', '非常好用的音效插件', 4, '', 0, 5],
+    ['Auto Mouse Pro', 'https://rodgersnow.lanzoul.com/iL1lw2vkj48f', '小巧的鼠标操作录制器', 4, '', 0, 6],
+    ['SoftCnKiller', 'https://rodgersnow.lanzoul.com/i2iK530pyffi', '流氓软件专杀工具', 4, '', 0, 7],
+    ['电源计划管理', 'https://rodgersnow.lanzoul.com/inZdI30sve1i', '配置系统电源计划', 4, '', 0, 8],
+    ['在线查毒', 'https://www.virscan.org/', '在线检测可疑文件网站', 4, '', 0, 9],
+    ['WebCam', 'https://rodgersnow.lanzoul.com/iLziY304r0uf', '摄像头开关和截图小工具', 4, '', 0, 10],
+    ['Windows超级管理器', 'https://rodgersnow.lanzoul.com/imBYV35twlsj', '系统管理和配置工具', 4, '', 0, 11],
+    ['运行库合集', 'https://rodgersnow.lanzoul.com/iKDwq3ch4okb', 'VC++运行库', 4, '', 0, 12],
+    ['桌面硬件监控', 'https://rodgersnow.lanzoul.com/ixbqS3eos8gj', '开源的硬件信息显示小工具', 4, '', 0, 13],
+    ['系统基本设置', 'https://rodgersnow.lanzoul.com/ir9v03gprfpc', '系统设置工具', 4, '', 0, 14],
+    ['StreamsRemover', 'https://rodgersnow.lanzoul.com/ittJq3j8rl6f', '去掉程序运行安全提示', 4, '', 0, 15],
+    ['桌面转移', 'https://rodgersnow.lanzoul.com/i6cpA2u1bhqd', '将系统目录迁移到其他盘', 5, '', 0, 1],
+    ['GeekDesk', 'https://rodgersnow.lanzoul.com/iqZJg2uccvpi', '精美的程序启动器', 5, '', 0, 2],
+    ['VMware虚拟机', 'https://share.feijipan.com/s/SuPH2srY', 'Win平台性能最强的虚拟机', 5, '', 0, 3],
+    ['Wise Auto Shutdown', 'https://rodgersnow.lanzoul.com/iHzRy2z7vnuj', '定时关机小工具', 5, '', 0, 4],
+    ['AppReadWriteCounter', 'https://rodgersnow.lanzoul.com/iZcij305j41i', '应用程序文件读写监控', 5, '', 0, 5],
+    ['Simple Run Blocker', 'https://rodgersnow.lanzoul.com/icAiV30q49xg', '禁止指定软件运行', 5, '', 0, 6],
+    ['强制删除文件', 'https://rodgersnow.lanzoul.com/ic6xu30unjxe', '解锁正在使用的文件', 5, '', 0, 7],
+    ['内存优化', 'https://rodgersnow.lanzoul.com/iC67L31sob8b', '智能内存整理优化', 5, '', 0, 8],
+    ['此电脑图标管理', 'https://rodgersnow.lanzoul.com/iEXkw32x2wjc', '可删除WPS或百度云盘图标', 5, '', 0, 9],
+    ['OpenSpeedy', 'https://rodgersnow.lanzoul.com/iHYAR3eby2hc', '类似变速齿轮，能加快百度网盘下载速度！', 5, '', 0, 10],
+    ['Colis悬浮窗', 'https://rodgersnow.lanzoul.com/il2Ol3auxv6j', '显示CPU和内存之类的信息', 5, '', 0, 11],
+    ['一键系统文件转移', 'https://rodgersnow.lanzoul.com/ijy7r3fpbo4d', '将系统文件转移到其他盘', 5, '', 0, 12],
+    ['Open-ShellMenu', 'https://rodgersnow.lanzoul.com/i4jaB2wsx3fe', 'Win10平台传统开始菜单', 6, '', 0, 1],
+    ['StartAllBack', 'https://rodgersnow.lanzoul.com/i3F3S3cu9zsd', 'Win11平台传统开始菜单', 6, '', 0, 2],
+    ['Winsetp Nexus', 'https://rodgersnow.lanzoul.com/i2WQn2zkkssj', '最著名的桌面美化工具', 6, '', 0, 3],
+    ['桌面宠物', 'https://rodgersnow.lanzoul.com/imv2m2zklgid', '内含四款桌面宠物软件', 6, '', 0, 4],
+    ['鼠标尾巴', 'https://rodgersnow.lanzoul.com/iLyWw2zkljtc', '鼠标指针拖星带月效果', 6, '', 0, 5],
+    ['桌面整理', 'https://rodgersnow.lanzoul.com/ikiZP2zklxah', '桌面图标分类整理工具', 6, '', 0, 6],
+    ['桌面蚂蚁', 'https://rodgersnow.lanzoul.com/iNVrF35ubjqf', '桌面小宠物', 6, '', 0, 7],
+    ['美化版指针', 'https://rodgersnow.lanzoul.com/ieWAN371436f', '漂亮的鼠标指针合集', 6, '', 0, 8],
+    ['键位显示器', 'https://rodgersnow.lanzoul.com/ieKR337xiqwf', '请查看使用教程', 6, '', 0, 9],
+    ['七仔的桌面工具', 'https://rodgersnow.lanzoul.com/inZN037z4c3a', '工具内含说明文件', 6, '', 0, 10],
+    ['BongoCat', 'https://rodgersnow.lanzoul.com/io3Tq3cgrb7c', 'Q萌的键鼠替身', 6, '', 0, 11],
+    ['鼠标特效', 'https://rodgersnow.lanzoul.com/iuBr83ji2nab', '非常漂亮的鼠标特效工具', 6, '', 0, 12],
+    ['TranslucentTB', 'https://rodgersnow.lanzoul.com/ifhD23k9dwcf', '任务栏透明工具', 6, '', 0, 13],
+    ['360浏览器', 'https://rodgersnow.lanzoul.com/itHJI2vh6thi', '去广告绿色版', 7, '', 0, 1],
+    ['360极速浏览器', 'https://rodgersnow.lanzoul.com/iIptk2vh6upc', '去广告纯净版', 7, '', 0, 2],
+    ['Iceweasel极速版', 'https://rodgersnow.lanzoul.com/iqhPc2vh75qj', 'FirFox定制版', 7, '', 0, 3],
+    ['谷歌浏览器', 'https://www.iplaysoft.com/tools/chrome/', '国内镜像下载网站', 7, '', 0, 4],
+    ['谷歌浏览器', 'https://rodgersnow.lanzoul.com/ixDcq37gr2md', '开源版蓝标谷歌', 7, '', 0, 5],
+    ['Supermium', 'https://www.123865.com/s/P9Dyjv-Tz6CA?pwd=2tF5#', 'Windows7能用的谷歌浏览器', 7, '', 0, 6],
+    ['雷电模拟器', 'https://share.feijipan.com/s/xqHMTvmf', '绿色去广告版', 8, '', 0, 1],
+    ['系统自带纸牌', 'https://rodgersnow.lanzoul.com/idIQ72uclsgf', '经典纸牌游戏', 8, '', 0, 2],
+    ['保卫萝卜', 'https://rodgersnow.lanzoul.com/ila0i2uclugh', '经典塔塔防游戏', 8, '', 0, 3],
+    ['90坦克重置版', 'https://rodgersnow.lanzoul.com/iTa1736ff1kb', '童年回忆杀', 8, '', 0, 4],
+    ['植物大战僵尸杂交版', 'https://share.feijipan.com/s/l4Y0cUXd?code=CSCQ', '另类修改版', 8, '', 0, 5],
+    ['街机游戏模拟器', 'https://share.feijipan.com/s/bl0fu8SW', '经典街机游戏合集', 8, '', 0, 6],
+    ['Steam安装包', 'https://rodgersnow.lanzoul.com/iSD5H32hmskd', 'Steam在线安装包', 8, '', 0, 7],
+    ['傲气雄鹰', 'https://rodgersnow.lanzoul.com/irsvh36glzbi', '好玩耐玩的射击类游戏', 8, '', 0, 8],
+    ['暴力摩托', 'https://rodgersnow.lanzoul.com/iPVSC377f2wh', '经典网吧老游戏', 8, '', 0, 9],
+    ['杀戮尖塔', 'https://rodgersnow.lanzoul.com/iGlaY37l4f2d', '回合制卡牌游戏', 8, '', 0, 10],
+    ['红白机游戏', 'https://rodgersnow.lanzoul.com/irvz137s21kh', 'FC任天堂模拟器', 8, '', 0, 11],
+    ['红色警戒', 'https://share.feijipan.com/s/rdXb3OAX?code=CSCQ', '支持Win10以上系统', 8, '', 0, 12],
+    ['暗黑破坏神', 'https://share.feijipan.com/s/2tXb37tr?code=CSCQ', '暗黑2毁灭之王', 8, '', 0, 13],
+    ['火炬之光2', 'https://share.feijipan.com/s/CPXb3lXV?code=CSCQ', '刷子类RPG游戏', 8, '', 0, 14],
+    ['UIFO塔防游戏', 'https://share.feijipan.com/s/VzXb3sg9?code=CSCQ', '太空类主题塔防', 8, '', 0, 15],
+    ['三国群英传7', 'https://share.feijipan.com/s/TqXb3Ki5?code=CSCQ', '策略类回合制游戏', 8, '', 0, 16],
+    ['游戏资源网', 'https://www.gamefreer.com/', '各类游戏免费下载', 8, '', 0, 17],
+    ['WeGame', 'https://rodgersnow.lanzoul.com/iyJbM3kds71i', '腾讯游戏', 8, '', 0, 18],
+    ['抖音官网', 'https://www.douyin.com/', '抖音网页版', 9, '', 0, 1],
+    ['QQ音乐', 'https://rodgersnow.lanzoul.com/i66Re2yqv5mb', '绿色去广告版本', 9, '', 0, 2],
+    ['PotPlayer', 'https://rodgersnow.lanzoul.com/ihXn434vl9la', '视频播放器', 9, '', 0, 3],
+    ['YY语音', 'https://share.feijipan.com/s/U6325fFB', '去广告双开无限制版', 9, '', 0, 4],
+    ['1by1播放器', 'https://rodgersnow.lanzoul.com/inyEO2xavhla', '小巧的本地音乐播放器', 9, '', 0, 5],
+    ['酷狗音乐', 'https://rodgersnow.lanzoul.com/ioB3w2yq1xob', '绿色去广告版', 9, '', 0, 6],
+    ['直播音效铺助', 'https://rodgersnow.lanzoul.com/iHjFO32ogvna', '直播音效辅助工具', 9, '', 0, 7],
+    ['NETworkManager', 'https://rodgersnow.lanzoul.com/iNBmW2u3j4dc', '网络管理', 10, '', 0, 1],
+    ['可视化Ping', 'https://rodgersnow.lanzoul.com/iUhBl2u3j4ji', '图形化Ping命令', 10, '', 0, 2],
+    ['宽带测速', 'https://rodgersnow.lanzoul.com/iSdA02u3j4mb', '网络测速', 10, '', 0, 3],
+    ['飞鸽传书', 'https://rodgersnow.lanzoul.com/iDQQA2u3j4ed', '局域网文件传输工具', 10, '', 0, 4],
+    ['HTTP Downloader', 'https://rodgersnow.lanzoul.com/in6Fu39s5m9c', '非常小巧的下载器', 10, '', 0, 5],
+    ['Free Download Manager', 'https://rodgersnow.lanzoul.com/iCrHm37k14ub', '全能型多功能下载器', 10, '', 0, 6],
+    ['共享管理软件', 'https://rodgersnow.lanzoul.com/isaRd3dbxkpg', '共享报错代码精准修复', 10, '', 0, 7],
+    ['网络急救箱', 'https://rodgersnow.lanzoul.com/is8Pp3du961i', '专用网络修复工具', 10, '', 0, 8],
+    ['网盘挂载', 'https://rodgersnow.lanzoul.com/iBdg13j0877a', 'RaiDrive免费版', 10, '', 0, 9],
+    ['dufs文件服务器', 'https://rodgersnow.lanzoul.com/iDuuw3j1wo5a', '开源http+WebDAV文件服务器', 10, '', 0, 10],
+    ['CHFS', 'https://rodgersnow.lanzoul.com/iqNYz3j3pzpg', '文件共享服务器', 10, '', 0, 11],
+    ['SFTPGO', 'https://rodgersnow.lanzoul.com/irY523j6167i', '开源企业级网盘', 10, '', 0, 12],
+    ['Lucky', 'https://rodgersnow.lanzoul.com/iSwYN3jilbsb', '开源网络工具', 10, '', 0, 13],
+    ['搜狗拼音', 'https://rodgersnow.lanzoul.com/i79hI35u99ah', '搜狗拼音去广告版', 11, '', 0, 1],
+    ['搜狗五笔', 'https://rodgersnow.lanzoul.com/i6a9S2svjy0f', '搜狗五笔去广告版', 11, '', 0, 2],
+    ['QQ拼音', 'https://rodgersnow.lanzoul.com/i3f4O2svk1sb', 'QQ拼音纯净版', 11, '', 0, 3],
+    ['手心拼音', 'https://rodgersnow.lanzoul.com/iGoOg36yf2ab', '良心无广告拼音输入法', 11, '', 0, 4],
+    ['万能五笔输入法', 'https://rodgersnow.lanzoul.com/icqF72vth81e', '去广告去升级版', 11, '', 0, 5],
+    ['逍遥笔手写', 'https://rodgersnow.lanzoul.com/iIxd02vth83g', '手写输入法', 11, '', 0, 6],
+    ['一直英文', 'https://rodgersnow.lanzoul.com/ibxF62vthk1g', '让指定程序保持英文输入法', 11, '', 0, 7],
+    ['输入法设置工具', 'https://rodgersnow.lanzoul.com/iOnUW2vthlef', '输入法配置器', 11, '', 0, 8],
+    ['讯飞语音输入法', 'https://rodgersnow.lanzoul.com/iAYIy31nznja', '绿色去广告版', 11, '', 0, 9],
+    ['微信输入法', 'https://share.feijipan.com/s/2DYk5VKa?code=CSCQ', '腾讯为数不多的精品', 11, '', 0, 10],
+    ['Microsoft Office 2016', 'https://share.feijipan.com/s/ZAHHngy2', '微软 Office 2016全套', 12, '', 0, 1],
+    ['WPS 2016', 'https://rodgersnow.lanzoul.com/ikY2D2u67jch', '无登录极速绿色版', 12, '', 0, 2],
+    ['CherryTree', 'https://rodgersnow.lanzoul.com/iZCBd2yrw4fa', '层级分类的笔记软件', 12, '', 0, 3],
+    ['WeekToDo', 'https://rodgersnow.lanzoul.com/izHmJ303017a', '优秀的开源日程管理软件', 12, '', 0, 4],
+    ['Microsoft Office 2024', 'https://share.feijipan.com/s/2WG6OA5J?code=CSCQ', '微软 Office 2024', 12, '', 0, 5],
+    ['Notepad++ v8.8.8', 'https://rodgersnow.lanzoul.com/irWOV3bj0vyj', 'Notepad++最新版', 12, '', 0, 6],
+    ['RevoUninstaller', 'https://rodgersnow.lanzoul.com/iO0EA38et0id', '软件卸载', 13, '', 0, 1],
+    ['HiBit-Uninstaller', 'https://rodgersnow.lanzoul.com/iq2CR3inm06d', '软件卸载', 13, '', 0, 2],
+    ['Uninstall-Tool', 'https://rodgersnow.lanzoul.com/iOWSY2u0kagj', '软件卸载', 13, '', 0, 3],
+    ['火绒强力卸载', 'https://rodgersnow.lanzoul.com/iIwAe3hn4l4d', '火绒出品的卸载工具', 13, '', 0, 4],
+    ['WizTree', 'https://rodgersnow.lanzoul.com/i0Uqf3n2cy4j', '查找大文件', 14, '', 0, 1],
+    ['BoosterX', 'https://rodgersnow.lanzoul.com/iQjD239onx9c', '号称游戏战队专用优化工具', 14, '', 0, 2],
+    ['GoCleaner', 'https://rodgersnow.lanzoul.com/iq0qU33i6eqb', '轻量级垃圾清理工具', 14, '', 0, 3],
+    ['缓存清理脚本', 'https://rodgersnow.lanzoul.com/ibS9b33wccwf', '临时文件清理脚本', 14, '', 0, 4],
+    ['ZyperWin++', 'https://rodgersnow.lanzoul.com/iDumg37wkt9g', '开源优化工具', 14, '', 0, 5],
+    ['Memory Cleaner', 'https://rodgersnow.lanzoul.com/iOZNi37ron8d', '内存清理工具', 14, '', 0, 6],
+    ['磁盘文件分析', 'https://rodgersnow.lanzoul.com/idA5c3inlaja', '目录文件分析', 14, '', 0, 7],
+    ['优化鸭-OptimizerDuck', 'https://rodgersnow.lanzoul.com/i7orI3rioi1c', '强大的开源优化工具', 14, '', 0, 8],
+    ['7-Zip', 'https://rodgersnow.lanzoul.com/i4eon2u0okyb', '开源压缩解压工具', 15, '', 0, 1],
+    ['PeaZip', 'https://rodgersnow.lanzoul.com/iTkTA3inlw3g', '免费压缩解压工具', 15, '', 0, 2],
+    ['N卡驱动', 'https://www.nvidia.cn/drivers/lookup/', '', 16, '', 0, 1],
+    ['戴尔驱动', 'https://www.dell.com/support/home/zh-cn/', '戴尔官方驱动下载', 16, '', 0, 2],
+    ['华硕驱动', 'https://www.asus.com.cn/support/download-center/', '华硕官网驱动', 16, '', 0, 3],
+    ['联想驱动', 'https://newsupport.lenovo.com.cn/driveDownloads_index.html', '联想官方驱动', 16, '', 0, 4],
+    ['惠普驱动', 'https://support.hp.com/cn-zh/drivers', '惠普官方驱动', 16, '', 0, 5],
+    ['微星驱动', 'https://www.msi.cn/support/download', '微星官方驱动', 16, '', 0, 6],
+    ['技嘉驱动', 'https://www.gigabyte.cn/Support/Consumer/Download', '技嘉官网驱动', 16, '', 0, 7],
+    ['七彩虹驱动', 'https://www.colorful.cn/home/download', '七彩虹官网驱动', 16, '', 0, 8],
+    ['华为管家', 'https://consumer.huawei.com/cn/support/pc-manager/', '华为电脑管家', 16, '', 0, 9],
+    ['LogicHub', 'https://rodgersnow.lanzoul.com/iWGvl3k5wdqf', '罗技设备驱动', 16, '', 0, 10],
+    ['小米驱动', 'https://www.mi.com/service/notebook/drivers', '小米笔记本驱动', 16, '', 0, 11],
+    ['机械革命', 'http://www.mechrevo.com/service/', '电竞控制台', 16, '', 0, 12],
+    ['LegionZone官网', 'https://legionzone.lenovo.com/', '拯救者设备控制中心', 16, '', 0, 13],
+    ['华硕驱动', 'https://driverhub.asus.com.cn/zh-CN', '华硕官网驱动在线安装', 16, '', 0, 14],
+    ['雷神笔记本', 'https://www.thunderobot.com/driver', '雷神官网驱动', 16, '', 0, 15],
+    ['火影笔记本', 'https://www.firebat.com.cn/index/serve/drive', '官网驱动', 16, '', 0, 16],
+    ['小米管家', 'https://pc.mi.com/pc-manager-help', '小米驱动工具', 16, '', 0, 17],
+    ['西伯利亚耳麦', 'https://www.xiberia.net/h-col-105.html', '西伯利亚官网驱动', 16, '', 0, 18],
+    ['HyperX官网', 'https://hyperx.com/pages/ngenuity', 'HyperX耳麦驱动', 16, '', 0, 19],
+    ['GCC下载', 'https://www.gigabyte.cn/Consumer/Software/GIGABYTE-Control-Center/', '技嘉神光同步', 17, '', 0, 1],
+    ['iGameCenter', 'https://www.colorful.cn/iGameCenter/', '七彩虹游戏中心', 17, '', 0, 2],
+    ['MSI Afterburner', 'https://www.msi.com/Landing/afterburner/graphics-cards', '微星小飞机', 17, '', 0, 3],
+    ['超频3屏显驱动', 'https://www.pccooler.cn/software', '超频3设备副屏驱动', 17, '', 0, 4],
+    ['Myth.Cool', 'https://myth.cool/cn/', 'Myth.Cool官网驱动', 17, '', 0, 5],
+    ['联力官网', 'https://lianli-cn.com/lconnect3', '联力控制器', 17, '', 0, 6],
+    ['利民水冷驱动', 'https://thermalright.com.cn/downloads', '', 17, '', 0, 7],
+    ['TRYX创氪星系', 'https://cn.tryxzone.com/downloads/', '', 17, '', 0, 8],
+    ['钛钽官网', 'https://www.tcomas.cn//downloads', '钛钽神光同步', 17, '', 0, 9],
+    ['Thermaltake官网', 'https://www.thermaltake.com.cn/downloads', 'TT水冷驱动', 17, '', 0, 10],
+    ['驱动总裁', 'https://rodgersnow.lanzoul.com/iLfam2ueitxc', '最新去扫描登录版', 18, '', 0, 1],
+    ['驱动人生', 'https://rodgersnow.lanzoul.com/iuphY2ueited', '去广告绿色版', 18, '', 0, 2],
+    ['驱动精灵', 'https://rodgersnow.lanzoul.com/iXxPO2ueiszi', '适合老爷机的去广告版', 18, '', 0, 3],
+    ['360驱动大师', 'https://rodgersnow.lanzoul.com/i3DjK367okfg', '去广告绿色版', 18, '', 0, 4],
+    ['Display Driver Uninstaller', 'https://rodgersnow.lanzoul.com/i6mm43qr53sd', '显卡驱动程序卸载工具', 18, '', 0, 5],
+    ['Ashampoo Driver Updater', 'https://rodgersnow.lanzoul.com/i6MGU31twbxa', '阿香婆驱动更新管理', 18, '', 0, 6],
+    ['DriverEasyPro', 'https://rodgersnow.lanzoul.com/i0rVa3rg9v0h', '在线驱动更新', 18, '', 0, 7],
+    ['G-Menu', 'https://www.aocmonitor.com.cn/download', 'AOC显示器滤镜', 18, '', 0, 8],
+];
+
+$stmt = $db->prepare("INSERT OR IGNORE INTO bookmarks (title, url, description, category_id, favicon, is_starred, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)");
+foreach ($bookmarks as $bm) {
+    $stmt->execute($bm);
+}
+
+// 创建安装完成标记文件（所有数据插入完成后生成）
+file_put_contents(__DIR__ . '/data/.installed', date('Y-m-d H:i:s'));
+
+echo "<!DOCTYPE html>
+<html lang='zh-CN'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>安装完成 - TechMark</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a1a; color: #e0e0e0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .container { text-align: center; padding: 40px; background: #1a1a2e; border-radius: 16px; border: 1px solid #2a2a4a; max-width: 500px; width: 90%; }
+        .icon { font-size: 64px; margin-bottom: 20px; }
+        h1 { color: #00d4ff; margin-bottom: 15px; font-size: 24px; }
+        p { color: #888; margin-bottom: 25px; line-height: 1.6; }
+        .info { background: #0d1b2a; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #1a3a5a; text-align: left; }
+        .info p { margin-bottom: 5px; color: #aaa; font-size: 14px; }
+        .info strong { color: #00d4ff; }
+        .warning { color: #ff6b6b !important; font-weight: bold; margin-top: 10px !important; }
+        a { display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #00d4ff, #0080ff); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.3s; }
+        a:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,212,255,0.3); }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='icon'>✅</div>
+        <h1>安装完成！</h1>
+        <p>TechMark 科技书签已成功安装，示例数据已导入。</p>
+        <div class='info'>
+            <p><strong>后台地址：</strong>admin.php</p>
+            <p><strong>管理员账号：</strong>admin</p>
+            <p><strong>默认密码：</strong>请在首次登录后查看提示信息</p>
+            <p class='warning'>⚠️ 安全提醒：首次登录后请立即修改默认密码！</p>
+            <p class='warning'>⚠️ 生产环境请关闭PHP错误显示（display_errors = Off）</p>
+        </div>
+        <a href='index.php'>进入网站首页 →</a>
+    </div>
+</body>
+</html>";
